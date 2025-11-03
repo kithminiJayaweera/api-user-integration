@@ -175,7 +175,7 @@ export function CustomForm({ initialData, isEdit, onSubmit, onOpenChange }: Prop
 					{errors.gender && <p className="mt-1 text-sm text-red-600">{errors.gender}</p>}
 				</div>
 
-				<div className="sm:col-span-2">
+				<div>
 					<label className="mb-1 block text-sm font-medium">Email</label>
 					<Input
 						name="email"

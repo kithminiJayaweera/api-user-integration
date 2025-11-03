@@ -185,32 +185,6 @@ function ViewOnlyActionsCell({ user }: { user: User }) {
 
 export const columns: ColumnDef<User>[] = [
   {
-    id: 'select',
-    header: ({ table }) => (
-      <input
-        type="checkbox"
-        aria-label="Select all"
-        checked={table.getIsAllRowsSelected()}
-        onChange={table.getToggleAllRowsSelectedHandler()}
-        className="h-4 w-4"
-        // use inline accentColor for broad browser support and keep Tailwind classes minimal
-        style={{ accentColor: '#000' }}
-      />
-    ),
-    cell: ({ row }) => (
-      <input
-        type="checkbox"
-        aria-label={`Select row ${row.id}`}
-        checked={row.getIsSelected()}
-        onChange={row.getToggleSelectedHandler()}
-        className="h-4 w-4"
-        style={{ accentColor: '#000' }}
-      />
-    ),
-    enableSorting: false,
-    enableColumnFilter: false,
-  },
-  {
     accessorKey: 'id',
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="ID" />

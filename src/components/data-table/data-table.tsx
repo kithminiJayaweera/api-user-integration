@@ -1,9 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import TableColumnsDropdown from './table-columns-dropdown';
+import DataTableToolbar from './data-table-toolbar';
 import RowsPerPageSelect from '@/components/customUi/rows-per-page-select';
 
 import { UserForm } from '@/components/form/add-post-form';
@@ -21,6 +18,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
+import { createSelectionColumn } from './selection-column';
 
 import {
   Table,
@@ -73,9 +71,20 @@ export function DataTable<TData, TValue>({
     });
   }, [data, searchField, searchQuery]);
 
+  const tableColumns = React.useMemo(() => {
+    if (onDeleteSelected) {
+      const sel = createSelectionColumn<TData>();
+      // avoid inserting twice if the columns already include a selection column
+      if (Array.isArray(columns) && columns[0]?.id !== sel.id) {
+        return [sel as ColumnDef<TData, TValue>, ...columns];
+      }
+    }
+    return columns;
+  }, [columns, onDeleteSelected]);
+
   const table = useReactTable({
     data: filteredData,
-    columns,
+    columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
@@ -95,53 +104,24 @@ export function DataTable<TData, TValue>({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Input
-          placeholder={`Search by ${searchField === 'firstName' ? 'name' : searchField}...`}
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          className="max-w-xs"
+      <div className="mb-4">
+        {/* Toolbar component - keeps DataTable file smaller and reusable */}
+        <DataTableToolbar
+          table={table}
+          searchField={searchField}
+          setSearchField={(v: string) => setSearchField(v as any)}
+          searchQuery={searchQuery}
+          setSearchQuery={(v: string) => setSearchQuery(v)}
+          onAddClick={() => setAddOpen(true)}
+          onDeleteSelected={onDeleteSelected}
         />
-        <Select value={searchField} onValueChange={(v) => setSearchField(v as any)}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="firstName">Name</SelectItem>
-            <SelectItem value="email">Email</SelectItem>
-            <SelectItem value="id">ID</SelectItem>
-            <SelectItem value="phone">Phone</SelectItem>
-            <SelectItem value="birthDate">Date of Birth</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <div className="ml-auto flex items-center gap-2">
-          <TableColumnsDropdown table={table} />
-
-          {/* Delete selected (visible only when there are selected rows) */}
-          {table.getSelectedRowModel().flatRows.length > 0 && (
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (!confirm(`Delete ${table.getSelectedRowModel().flatRows.length} selected row(s)?`)) return;
-                const rows = table.getSelectedRowModel().flatRows.map((r) => r.original as TData);
-                if (onDeleteSelected) onDeleteSelected(rows);
-                setRowSelection({});
-              }}
-            >
-              Delete selected ({table.getSelectedRowModel().flatRows.length})
-            </Button>
-          )}
-
-          <UserForm
-            open={addOpen}
-            onOpenChange={setAddOpen}
-            onSubmit={async (data) => {
-              if (onAddData) await onAddData(data);
-            }}
-          />
-          <Button onClick={() => setAddOpen(true)}>Add Data</Button>
-        </div>
+        <UserForm
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          onSubmit={async (data) => {
+            if (onAddData) await onAddData(data);
+          }}
+        />
       </div>
       <div className="overflow-hidden rounded-md border">
         <Table>
@@ -173,7 +153,7 @@ export function DataTable<TData, TValue>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell colSpan={table.getVisibleFlatColumns().length} className="h-24 text-center">
                   No results.
                 </TableCell>
               </TableRow>
