@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import DataTableToolbar from './data-table-toolbar';
-import RowsPerPageSelect from '@/components/customUi/rows-per-page-select';
 
 import { UserForm } from '@/components/form/add-post-form';
 
@@ -19,6 +18,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { createSelectionColumn } from './selection-column';
+import DataTableFooter from './data-table-footer';
 
 import {
   Table,
@@ -28,13 +28,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { DataTablePagination } from '../customUi/pagination';
+// pagination is provided by DataTableFooter
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   onAddData?: (newData: any) => void;
   onDeleteSelected?: (rows: TData[]) => void;
+  /** enable row selection; selection column is added automatically */
+  selectable?: boolean;
+  /** called whenever selection state changes; receives the raw rowSelection object */
+  onSelectionChange?: (selection: RowSelectionState) => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -42,6 +46,8 @@ export function DataTable<TData, TValue>({
   data,
   onAddData,
   onDeleteSelected,
+  selectable = false,
+  onSelectionChange,
 }: DataTableProps<TData, TValue>) {
   const [addOpen, setAddOpen] = React.useState(false);
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -72,15 +78,14 @@ export function DataTable<TData, TValue>({
   }, [data, searchField, searchQuery]);
 
   const tableColumns = React.useMemo(() => {
-    if (onDeleteSelected) {
+    if (selectable) {
       const sel = createSelectionColumn<TData>();
-      // avoid inserting twice if the columns already include a selection column
       if (Array.isArray(columns) && columns[0]?.id !== sel.id) {
         return [sel as ColumnDef<TData, TValue>, ...columns];
       }
     }
     return columns;
-  }, [columns, onDeleteSelected]);
+  }, [columns, selectable]);
 
   const table = useReactTable({
     data: filteredData,
@@ -92,7 +97,14 @@ export function DataTable<TData, TValue>({
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: (updater) => {
+      // updater can be an object or a function
+      setRowSelection((prev) => {
+        const next = typeof updater === 'function' ? updater(prev) : updater;
+        if (onSelectionChange) onSelectionChange(next as RowSelectionState);
+        return next as RowSelectionState;
+      });
+    },
 
     state: {
       sorting,
@@ -114,6 +126,7 @@ export function DataTable<TData, TValue>({
           setSearchQuery={(v: string) => setSearchQuery(v)}
           onAddClick={() => setAddOpen(true)}
           onDeleteSelected={onDeleteSelected}
+          selectable={selectable}
         />
         <UserForm
           open={addOpen}
@@ -161,19 +174,7 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-between py-4">
-        <div className="flex items-center space-x-2">
-          <p className="text-sm font-medium">Rows per page</p>
-          <RowsPerPageSelect
-            value={`${table.getState().pagination.pageSize}`}
-            onValueChange={(value) => table.setPageSize(Number(value))}
-            className="h-8 w-[70px]"
-          />
-        </div>
-        <div className="flex justify-end">
-          <DataTablePagination table={table} />
-        </div>
-      </div>
+      <DataTableFooter table={table} />
     </div>
   );
 }

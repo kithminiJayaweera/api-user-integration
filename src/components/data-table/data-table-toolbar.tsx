@@ -12,6 +12,7 @@ type Props = {
   setSearchQuery: (v: string) => void;
   onAddClick: () => void;
   onDeleteSelected?: (rows: any[]) => void;
+  selectable?: boolean;
 };
 
 export default function DataTableToolbar({
@@ -22,6 +23,7 @@ export default function DataTableToolbar({
   setSearchQuery,
   onAddClick,
   onDeleteSelected,
+  selectable = false,
 }: Props) {
   const selectedCount = table.getSelectedRowModel().flatRows.length;
 
@@ -50,7 +52,7 @@ export default function DataTableToolbar({
       <div className="ml-auto flex items-center gap-2">
         <TableColumnsDropdown table={table} />
 
-        {selectedCount > 0 && onDeleteSelected && (
+  {selectable && selectedCount > 0 && onDeleteSelected && (
           <Button
             variant="destructive"
             onClick={() => {
