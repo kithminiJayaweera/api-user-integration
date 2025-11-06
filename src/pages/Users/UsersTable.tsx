@@ -1,29 +1,36 @@
-import { apiColumns, User } from '@/components/data-table/columns';
+import { productColumns, Product } from '@/components/data-table/product-columns';
 import { DataTable } from '@/components/data-table/data-table';
-import { useUsers } from '@/hooks/useUserQueries';
-import { usePostStore } from '@/store/postStore';
-import { useNavigate } from 'react-router-dom';
+import TableSkeleton from '@/components/customUi/TableSkeleton';
+import { useProducts } from '@/hooks/useProductQueries';
 
 type Props = {
-  data?: User[];
-  onAddData?: (data: User) => void;
+  data?: Product[];
+  onAddData?: (data: Product) => void;
 };
 
 export default function UsersTable({ data, onAddData }: Props) {
-  const { data: apiData } = useUsers();
-  const store = usePostStore();
+  const { data: apiData, isLoading } = useProducts();
 
-  const navigate = useNavigate();
+  const productSearchFields = [
+    { value: 'title', label: 'Title' },
+    { value: 'brand', label: 'Brand' },
+    { value: 'category', label: 'Category' },
+    { value: 'id', label: 'ID' },
+  ];
 
-  const handleAdd = (d: User) => {
-    if (onAddData) return onAddData(d);
-    store.addPost(d);
-    navigate('/newly-added');
-  };
+  if (isLoading) {
+    return <TableSkeleton rows={10} columns={7} showImage={true} />;
+  }
 
   return (
     <div className="mb-8">
-      <DataTable columns={apiColumns} data={data ?? apiData ?? []} onAddData={handleAdd} />
+      <DataTable
+        columns={productColumns}
+        data={data ?? apiData ?? []}
+        onAddData={onAddData}
+        searchFields={productSearchFields}
+        defaultSearchField="title"
+      />
     </div>
   );
 }

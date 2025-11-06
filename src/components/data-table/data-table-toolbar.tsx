@@ -10,9 +10,10 @@ type Props = {
   setSearchField: (v: string) => void;
   searchQuery: string;
   setSearchQuery: (v: string) => void;
-  onAddClick: () => void;
+  onAddClick?: () => void;
   onDeleteSelected?: (rows: any[]) => void;
   selectable?: boolean;
+  searchFields?: { value: string; label: string }[];
 };
 
 export default function DataTableToolbar({
@@ -24,13 +25,27 @@ export default function DataTableToolbar({
   onAddClick,
   onDeleteSelected,
   selectable = false,
+  searchFields,
 }: Props) {
   const selectedCount = table.getSelectedRowModel().flatRows.length;
+
+  // Default search fields for user data
+  const defaultSearchFields = [
+    { value: 'firstName', label: 'Name' },
+    { value: 'email', label: 'Email' },
+    { value: 'id', label: 'ID' },
+    { value: 'phone', label: 'Phone' },
+    { value: 'birthDate', label: 'Date of Birth' },
+  ];
+
+  const fields = searchFields || defaultSearchFields;
+  const currentField = fields.find(f => f.value === searchField);
+  const displayLabel = currentField?.label || searchField;
 
   return (
     <div className="mb-4 flex flex-wrap items-center gap-2">
       <Input
-        placeholder={`Search by ${searchField === 'firstName' ? 'name' : searchField}...`}
+        placeholder={`Search by ${displayLabel}...`}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         className="max-w-xs"
@@ -41,11 +56,11 @@ export default function DataTableToolbar({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="firstName">Name</SelectItem>
-          <SelectItem value="email">Email</SelectItem>
-          <SelectItem value="id">ID</SelectItem>
-          <SelectItem value="phone">Phone</SelectItem>
-          <SelectItem value="birthDate">Date of Birth</SelectItem>
+          {fields.map(field => (
+            <SelectItem key={field.value} value={field.value}>
+              {field.label}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
 
@@ -67,7 +82,7 @@ export default function DataTableToolbar({
           </Button>
         )}
 
-        <Button onClick={onAddClick}>Add Data</Button>
+        {onAddClick && <Button onClick={onAddClick}>Add Data</Button>}
       </div>
     </div>
   );

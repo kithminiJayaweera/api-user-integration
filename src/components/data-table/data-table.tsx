@@ -39,6 +39,10 @@ interface DataTableProps<TData, TValue> {
   selectable?: boolean;
   /** called whenever selection state changes; receives the raw rowSelection object */
   onSelectionChange?: (selection: RowSelectionState) => void;
+  /** custom search fields for the toolbar dropdown */
+  searchFields?: { value: string; label: string }[];
+  /** initial search field */
+  defaultSearchField?: string;
 }
 
 export function DataTable<TData, TValue>({
@@ -48,32 +52,28 @@ export function DataTable<TData, TValue>({
   onDeleteSelected,
   selectable = false,
   onSelectionChange,
+  searchFields,
+  defaultSearchField = 'id',
 }: DataTableProps<TData, TValue>) {
   const [addOpen, setAddOpen] = React.useState(false);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
-  const [searchField, setSearchField] = React.useState<'firstName' | 'email' | 'id' | 'phone' | 'birthDate'>('email');
+  const [searchField, setSearchField] = React.useState<string>(defaultSearchField);
   const [searchQuery, setSearchQuery] = React.useState('');
 
   const filteredData = React.useMemo(() => {
     if (!searchQuery) return data;
     const q = searchQuery.toLowerCase();
     return data.filter((row: any) => {
-      if (searchField === 'email') return String(row.email ?? '').toLowerCase().includes(q);
+      const value = String(row[searchField] ?? '').toLowerCase();
+      // special handling for firstName to include lastName
       if (searchField === 'firstName') {
         const full = `${row.firstName ?? ''} ${row.lastName ?? ''}`.toLowerCase();
-        return (
-          full.includes(q) ||
-          (row.firstName ?? '').toLowerCase().includes(q) ||
-          (row.lastName ?? '').toLowerCase().includes(q)
-        );
+        return full.includes(q) || value.includes(q);
       }
-      if (searchField === 'id') return String(row.id ?? '').toLowerCase().includes(q);
-      if (searchField === 'phone') return String(row.phone ?? '').toLowerCase().includes(q);
-      if (searchField === 'birthDate') return String(row.birthDate ?? '').toLowerCase().includes(q);
-      return true;
+      return value.includes(q);
     });
   }, [data, searchField, searchQuery]);
 
@@ -121,20 +121,23 @@ export function DataTable<TData, TValue>({
         <DataTableToolbar
           table={table}
           searchField={searchField}
-          setSearchField={(v: string) => setSearchField(v as any)}
+          setSearchField={(v: string) => setSearchField(v)}
           searchQuery={searchQuery}
           setSearchQuery={(v: string) => setSearchQuery(v)}
-          onAddClick={() => setAddOpen(true)}
+          onAddClick={onAddData ? () => setAddOpen(true) : undefined}
           onDeleteSelected={onDeleteSelected}
           selectable={selectable}
+          searchFields={searchFields}
         />
-        <UserForm
-          open={addOpen}
-          onOpenChange={setAddOpen}
-          onSubmit={async (data) => {
-            if (onAddData) await onAddData(data);
-          }}
-        />
+        {onAddData && (
+          <UserForm
+            open={addOpen}
+            onOpenChange={setAddOpen}
+            onSubmit={async (data) => {
+              if (onAddData) await onAddData(data);
+            }}
+          />
+        )}
       </div>
       <div className="overflow-hidden rounded-md border">
         <Table>

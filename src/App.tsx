@@ -1,17 +1,22 @@
 import { Routes, Route } from 'react-router-dom';
+import DashboardPage from './pages/Dashboard/DashboardPage';
 import NewlyAddedUsersTable from './pages/Users/NewlyAddedUsersTable';
 import UsersTable from './pages/Users/UsersTable';
-import Navbar from '@/components/navbar/navItem';
+import Sidebar from '@/components/sidebar/Sidebar';
 
 function App() {
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <Navbar />
-
-      <Routes>
-        <Route path="/" element={<UsersTable />} />
-        <Route path="/newly-added" element={<NewlyAddedUsersTable />} />
-      </Routes>
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
+      
+      {/* Main Content */}
+      <main className="ml-64 flex-1 p-8">
+        <Routes>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/products" element={<UsersTable />} />
+          <Route path="/users" element={<NewlyAddedUsersTable />} />
+        </Routes>
+      </main>
     </div>
   );
 }
