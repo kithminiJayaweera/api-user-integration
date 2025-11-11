@@ -134,7 +134,10 @@ export function DataTable<TData, TValue>({
             open={addOpen}
             onOpenChange={setAddOpen}
             onSubmit={async (data) => {
-              if (onAddData) await onAddData(data);
+              if (onAddData) {
+                // delegate to page-level handler
+                await onAddData(data);
+              }
             }}
           />
         )}

@@ -3,15 +3,18 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Eye, Edit, Trash2, Copy, Check } from 'lucide-react';
 import { useState } from 'react';
 import { z } from 'zod';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { UserForm } from '@/components/form/add-post-form';
 import { usePostStore } from '@/store/postStore';
 import { UserDetailsDialog } from '@/components/form/user-details-dialog';
 import { DataTableColumnHeader } from './table-columns-dropdown';
+import { useUpdateMongoUser, useDeleteMongoUser } from '@/hooks/useMongoUsers';
+import { MongoUser } from '@/apis/user';
 
 export const UserSchema = z.object({
-  id: z.number().min(1, 'ID must be greater than 0'),
+  id: z.union([z.number().min(1), z.string().min(1)]).optional(), // Accept both number and string IDs (for MongoDB compatibility)
   firstName: z
     .string()
     .min(1, 'First name is required')
@@ -67,7 +70,11 @@ export const UserSchema = z.object({
   gender: z.string().optional(),
 });
 
-export type User = z.infer<typeof UserSchema>;
+export type User = z.infer<typeof UserSchema> & {
+  _id?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -102,11 +109,57 @@ function CopyButton({ text }: { text: string }) {
 function ActionsCell({ user }: { user: User }) {
   const [showDialog, setShowDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const { updatePost, removePost } = usePostStore();
+  const { updatePost } = usePostStore();
+  const updateMutation = useUpdateMongoUser();
+  const deleteMutation = useDeleteMongoUser();
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this user?')) {
-      removePost(user.id);
+      try {
+        if (user._id) {
+          await deleteMutation.mutateAsync(user._id);
+          toast.success(`User "${user.firstName} ${user.lastName}" deleted from MongoDB!`);
+        } else {
+          // Fallback for local storage users (if any exist without _id)
+          toast.error('Cannot delete: User has no identifier');
+        }
+      } catch (error) {
+        console.error('❌ Delete failed:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        toast.error(`Failed to delete user: ${errorMessage}`);
+      }
+    }
+  };
+
+  const handleUpdate = async (updatedUser: User) => {
+    console.log('🔄 handleUpdate called with:', updatedUser);
+    console.log('🔍 Original user:', user);
+    try {
+      if (user._id) {
+        // Prepare data for MongoDB update
+        const updateData: Partial<MongoUser> = {
+          firstName: updatedUser.firstName,
+          lastName: updatedUser.lastName,
+          email: updatedUser.email,
+          age: updatedUser.age,
+          phone: updatedUser.phone,
+          gender: updatedUser.gender,
+          birthDate: updatedUser.birthDate
+        };
+        console.log('📤 Sending update to MongoDB:', { id: user._id, data: updateData });
+        await updateMutation.mutateAsync({ id: user._id, data: updateData });
+        console.log('✅ Update successful!');
+        toast.success(`User "${updatedUser.firstName} ${updatedUser.lastName}" updated in MongoDB!`);
+      } else {
+        console.log('📝 Updating locally (no _id)');
+        updatePost(updatedUser);
+        toast.success(`User "${updatedUser.firstName} ${updatedUser.lastName}" updated locally!`);
+      }
+      setShowEditDialog(false);
+    } catch (error) {
+      console.error('❌ Update failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to update user: ${errorMessage}`);
     }
   };
 
@@ -116,7 +169,10 @@ function ActionsCell({ user }: { user: User }) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setShowDialog(true)}
+          onClick={() => {
+            console.log('View button clicked for user:', user);
+            setShowDialog(true);
+          }}
           className="h-8 w-8 p-0"
         >
           <Eye className="h-3 w-3" />
@@ -124,7 +180,11 @@ function ActionsCell({ user }: { user: User }) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setShowEditDialog(true)}
+          onClick={(e) => {
+            e.stopPropagation();
+            console.log('Edit button clicked for user:', user);
+            setShowEditDialog(true);
+          }}
           className="h-8 w-8 p-0"
         >
           <Edit className="h-3 w-3" />
@@ -150,9 +210,7 @@ function ActionsCell({ user }: { user: User }) {
         onOpenChange={setShowEditDialog}
         initialData={user}
         isEdit
-        onSubmit={async (updatedUser) => {
-          updatePost(updatedUser);
-        }}
+        onSubmit={handleUpdate}
       />
     </>
   );
@@ -184,12 +242,6 @@ function ViewOnlyActionsCell({ user }: { user: User }) {
 }
 
 export const columns: ColumnDef<User>[] = [
-  {
-    accessorKey: 'id',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="ID" />
-    ),
-  },
   {
     accessorKey: 'firstName',
     header: ({ column }) => (
@@ -252,12 +304,6 @@ export const columns: ColumnDef<User>[] = [
 ];
 
 export const apiColumns: ColumnDef<User>[] = [
-  {
-    accessorKey: 'id',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="ID" />
-    ),
-  },
   {
     accessorKey: 'firstName',
     header: ({ column }) => (

@@ -1,22 +1,73 @@
-import axios from 'axios'
-import { User } from '@/components/data-table/columns'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import axios from 'axios';
 
-interface ApiUser {
-  id: number
-  firstName: string
-  lastName: string
-  age: number
-  gender: string
-  email: string
-  phone: string
-  birthDate?: string
-  birthdate?: string
-  dob?: string
+const API_BASE_URL = 'http://localhost:5000/api';
+
+export interface MongoUser {
+  _id?: string;
+  id?: number;
+  firstName: string;
+  lastName: string;
+  age: number;
+  gender: string;
+  email: string;
+  phone: string;
+  birthDate: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export async function fetchUsers(): Promise<User[]> {
-  const res = await axios.get<{ users: ApiUser[] }>('https://dummyjson.com/users')
-  const users: User[] = res.data.users.map((user: ApiUser) => ({
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: { 'Content-Type': 'application/json' }
+});
+
+export async function fetchMongoUsers(): Promise<MongoUser[]> {
+  try {
+    const response = await api.get('/users');
+    return response.data.data.map((user: any, index: number) => ({
+      ...user,
+      id: user._id || index + 1
+    }));
+  } catch (error) {
+    console.error('❌ Error fetching users:', error);
+    throw error;
+  }
+}
+
+export async function createMongoUser(userData: Omit<MongoUser, '_id' | 'id' | 'createdAt' | 'updatedAt'>): Promise<MongoUser> {
+  try {
+    const response = await api.post('/users', userData);
+    return { ...response.data.data, id: response.data.data._id };
+  } catch (error: any) {
+    console.error('❌ Error creating user:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || 'Failed to create user');
+  }
+}
+
+export async function updateMongoUser(id: string, userData: Partial<MongoUser>): Promise<MongoUser> {
+  try {
+    const response = await api.put(`/users/${id}`, userData);
+    return { ...response.data.data, id: response.data.data._id };
+  } catch (error: any) {
+    console.error('❌ Error updating user:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || 'Failed to update user');
+  }
+}
+
+export async function deleteMongoUser(id: string): Promise<void> {
+  try {
+    await api.delete(`/users/${id}`);
+  } catch (error: any) {
+    console.error('❌ Error deleting user:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || 'Failed to delete user');
+  }
+}
+
+// Keep original dummy API functions for products
+export async function fetchUsers(): Promise<any[]> {
+  const res = await axios.get('https://dummyjson.com/users');
+  return res.data.users.map((user: any) => ({
     id: user.id,
     firstName: user.firstName,
     lastName: user.lastName,
@@ -24,15 +75,13 @@ export async function fetchUsers(): Promise<User[]> {
     gender: user.gender,
     email: user.email,
     phone: user.phone,
-    // normalize possible date fields
-    birthDate: user.birthDate ?? user.birthdate ?? user.dob ?? '',
-  }))
-  return users
+    birthDate: user.birthDate ?? user.birthdate ?? user.dob ?? ''
+  }));
 }
 
-export async function fetchUserById(id: number): Promise<User> {
-  const res = await axios.get<ApiUser>(`https://dummyjson.com/users/${id}`)
-  const u = res.data
+export async function fetchUserById(id: number): Promise<any> {
+  const res = await axios.get(`https://dummyjson.com/users/${id}`);
+  const u = res.data;
   return {
     id: u.id,
     firstName: u.firstName,
@@ -41,8 +90,6 @@ export async function fetchUserById(id: number): Promise<User> {
     gender: u.gender,
     email: u.email,
     phone: u.phone,
-    birthDate: u.birthDate ?? u.birthdate ?? u.dob ?? '',
-  }
+    birthDate: u.birthDate ?? u.birthdate ?? u.dob ?? ''
+  };
 }
-
-export default fetchUsers

@@ -1,7 +1,8 @@
 import { Routes, Route } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import DashboardPage from './pages/Dashboard/DashboardPage';
 import NewlyAddedUsersTable from './pages/Users/NewlyAddedUsersTable';
-import UsersTable from './pages/Users/UsersTable';
+import ProductsTable from './pages/Products/ProductsTable';
 import Sidebar from '@/components/sidebar/Sidebar';
 
 function App() {
@@ -13,10 +14,13 @@ function App() {
       <main className="ml-64 flex-1 p-8">
         <Routes>
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/products" element={<UsersTable />} />
+          <Route path="/products" element={<ProductsTable />} />
           <Route path="/users" element={<NewlyAddedUsersTable />} />
         </Routes>
       </main>
+      
+      {/* Toast notifications */}
+      <Toaster position="top-right" richColors closeButton />
     </div>
   );
 }

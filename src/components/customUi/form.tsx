@@ -38,8 +38,11 @@ export function CustomForm({ initialData, isEdit, onSubmit, onOpenChange }: Prop
 		if (initialData) {
 			setPhone(initialData.phone ?? '');
 			setGenderVal(initialData.gender ?? '');
-			setAge(initialData.age ?? undefined);
-			setBirthDate(initialData.birthDate ? new Date(initialData.birthDate) : undefined);
+			const birthDateObj = initialData.birthDate ? new Date(initialData.birthDate) : undefined;
+			setBirthDate(birthDateObj);
+			// Calculate age from birthDate if available
+			const calculatedAge = birthDateObj ? calculateAgeFromBirthDate(birthDateObj) : initialData.age;
+			setAge(calculatedAge);
 		}
 	}, [initialData]);
 
@@ -82,35 +85,37 @@ export function CustomForm({ initialData, isEdit, onSubmit, onOpenChange }: Prop
 	return (
 		<form
 			onSubmit={async (e) => {
-				e.preventDefault();
-				const formData = new FormData(e.target as HTMLFormElement);
+				    e.preventDefault();
+				    console.log('📝 Form onSubmit triggered!', { isEdit });
+				    const formData = new FormData(e.target as HTMLFormElement);
 				const birthDateStr = birthDate ? format(birthDate, 'yyyy-MM-dd') : '';
 
-				// Generate a simple incremental id for new users; preserve existing id when editing.
-				// We persist the last id in sessionStorage under 'lastUserId' so ids increment per session.
-				let finalId: number;
-				if (initialData?.id) {
-					finalId = initialData.id;
-				} else {
-					const last = Number(sessionStorage.getItem('lastUserId') ?? 0) || 0;
-					finalId = last + 1;
-					sessionStorage.setItem('lastUserId', String(finalId));
-				}
+				// Calculate age from birthDate if available
+				const calculatedAge = birthDate ? calculateAgeFromBirthDate(birthDate) : age;
 
 				const rawData = {
-					id: finalId,
 					firstName: (formData.get('firstName') as string) ?? '',
 					lastName: (formData.get('lastName') as string) ?? '',
-					age: age || 0,
+					age: calculatedAge || 0,
 					gender: (formData.get('gender') as string) ?? '',
 					email: (formData.get('email') as string) ?? '',
 					phone: phone,
 					birthDate: birthDateStr,
+					// Preserve MongoDB _id and timestamps when editing
+					...(initialData?._id && { _id: initialData._id }),
+					...(initialData?.createdAt && { createdAt: initialData.createdAt }),
+					...(initialData?.updatedAt && { updatedAt: initialData.updatedAt }),
 				} as unknown as User;
 
+				console.log('📦 Raw form data:', rawData);
+
 				try {
+					console.log('🔍 Validating with UserSchema...');
 					const validatedData = UserSchema.parse(rawData);
+					console.log('✅ Validation passed!', validatedData);
+					console.log('🚀 Calling onSubmit handler...');
 					await Promise.resolve(onSubmit(validatedData));
+					console.log('✅ onSubmit completed successfully!');
 					(e.target as HTMLFormElement).reset();
 					setBirthDate(undefined);
 					setAge(undefined);
@@ -118,6 +123,8 @@ export function CustomForm({ initialData, isEdit, onSubmit, onOpenChange }: Prop
 					setErrors({});
 					onOpenChange?.(false);
 				} catch (error: any) {
+					console.error('❌ Form validation or submission error:', error);
+					console.error('❌ Error details:', error?.issues || error?.message);
 					const fieldErrors: Record<string, string> = {};
 					if (error?.issues) {
 						error.issues.forEach((err: any) => {
@@ -125,6 +132,7 @@ export function CustomForm({ initialData, isEdit, onSubmit, onOpenChange }: Prop
 						});
 					}
 					setErrors(fieldErrors);
+					console.log('❌ Field errors set:', fieldErrors);
 				}
 			}}
 			className="space-y-4"
@@ -209,12 +217,14 @@ export function CustomForm({ initialData, isEdit, onSubmit, onOpenChange }: Prop
 						birthDate={birthDate}
                         onBirthDateChange={(d) => {
 							setBirthDate(d);
+							// Calculate and update age when birthdate changes
+							const calcAge = d ? calculateAgeFromBirthDate(d) : undefined;
+							setAge(calcAge);
 							// validate birthDate and age on change so errors show immediately
 							if (d) {
 								const birthStr = format(d, 'yyyy-MM-dd');
 								validateField('birthDate', birthStr);
-                                const calcAge = calculateAgeFromBirthDate(d) ?? 0;
-								validateField('age', calcAge);
+								validateField('age', calcAge ?? 0);
 							} else {
 								// clear errors if cleared
 								setErrors((prev) => {
@@ -241,7 +251,19 @@ export function CustomForm({ initialData, isEdit, onSubmit, onOpenChange }: Prop
 			</div>
 
 			<div className="flex items-center gap-2">
-				<Button type="submit" className="flex-1">
+				<Button 
+					type="submit" 
+					className="flex-1"
+					onClick={() => {
+						console.log('🖱️ Update/Add button clicked!', { 
+							isEdit, 
+							type: 'submit',
+							hasErrors: Object.keys(errors).length > 0,
+							errors 
+						});
+						// Don't prevent default - let form submit naturally
+					}}
+				>
 					{isEdit ? 'Update User' : 'Add User'}
 				</Button>
 				<Button
@@ -249,6 +271,7 @@ export function CustomForm({ initialData, isEdit, onSubmit, onOpenChange }: Prop
 					variant="ghost"
 					className="w-32"
 					onClick={() => {
+						console.log('🖱️ Cancel button clicked');
 						onOpenChange?.(false);
 					}}
 				>
