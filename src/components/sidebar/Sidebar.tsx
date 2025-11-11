@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Users, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Package, Users, ChevronRight, UserCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
@@ -17,6 +17,11 @@ const menuItems = [
     title: 'Users',
     path: '/users',
     icon: Users,
+  },
+  {
+    title: 'Profile',
+    path: '/profile',
+    icon: UserCircle,
   },
 ];
 
