@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useAuth } from '@/hooks/useAuth';
 
 const getPageTitle = (pathname: string): { title: string; icon: React.ReactNode } => {
   switch (pathname) {
@@ -28,7 +29,13 @@ const getPageTitle = (pathname: string): { title: string; icon: React.ReactNode 
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const { title, icon } = getPageTitle(location.pathname);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-white shadow-sm">
@@ -45,19 +52,23 @@ export default function Navbar() {
             <DropdownMenuTrigger asChild>
               <Button 
                 variant="ghost" 
-                className="relative rounded-full p-0 w-10 h-10 hover:bg-transparent"
+                className="flex items-center gap-3 px-3 py-2 h-auto hover:bg-gray-100 rounded-lg"
               >
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-md hover:shadow-lg transition-shadow">
                   <User className="h-5 w-5" />
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="text-sm font-medium text-gray-900">{user?.name || 'User'}</span>
+                  <span className="text-xs text-gray-500">{user?.role === 'admin' ? 'Administrator' : 'User'}</span>
                 </div>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">Astoria Black</p>
+                  <p className="text-sm font-medium leading-none">{user?.name || 'User'}</p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    Astoria.black@gmail.com
+                    {user?.email || 'user@example.com'}
                   </p>
                 </div>
               </DropdownMenuLabel>
@@ -65,11 +76,8 @@ export default function Navbar() {
               <DropdownMenuItem onClick={() => navigate('/profile')}>
                 Profile
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                Settings
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600">
+              <DropdownMenuItem className="text-red-600" onClick={handleLogout}>
                 Log out
               </DropdownMenuItem>
             </DropdownMenuContent>

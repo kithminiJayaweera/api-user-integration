@@ -7,9 +7,11 @@ import TableSkeleton from '@/components/customUi/TableSkeleton';
 import { toast } from 'sonner';
 
 export default function NewlyAddedUsersTable() {
-  const { data: mongoUsers, isLoading, error } = useMongoUsers();
+  const { data: paginatedData, isLoading, error } = useMongoUsers(1, 100); // Get first 100 users
   const { newPosts, addPost } = usePostStore();
   const createMutation = useCreateMongoUser();
+  
+  const mongoUsers = paginatedData?.users || [];
 
   const userSearchFields = [
     { value: 'firstName', label: 'First Name' },
@@ -30,7 +32,7 @@ export default function NewlyAddedUsersTable() {
         birthDate: userData.birthDate
       };
       await createMutation.mutateAsync(mongoUserData);
-      toast.success(`User "${userData.firstName} ${userData.lastName}" added to MongoDB!`);
+      toast.success(`User "${userData.firstName} ${userData.lastName}" Succesfully Added!`);
     } catch (error) {
       console.error('❌ Failed to create user in MongoDB:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -77,7 +79,7 @@ export default function NewlyAddedUsersTable() {
   }
 
   // Convert MongoUser to User format
-  const convertedMongoUsers: User[] = (mongoUsers || []).map(user => ({
+  const convertedMongoUsers: User[] = mongoUsers.map(user => ({
     firstName: user.firstName,
     lastName: user.lastName,
     age: user.age,

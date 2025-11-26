@@ -28,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { PaginationInfo } from '@/apis/user';
 // pagination is provided by DataTableFooter
 
 interface DataTableProps<TData, TValue> {
@@ -43,6 +44,14 @@ interface DataTableProps<TData, TValue> {
   searchFields?: { value: string; label: string }[];
   /** initial search field */
   defaultSearchField?: string;
+  /** Backend pagination info - when provided, disables frontend pagination */
+  pagination?: PaginationInfo;
+  /** Callback when page changes (for backend pagination) */
+  onPageChange?: (page: number) => void;
+  /** Callback when page size changes (for backend pagination) */
+  onPageSizeChange?: (size: number) => void;
+  /** Whether current user is admin (for role-based UI) */
+  isAdmin?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -54,6 +63,10 @@ export function DataTable<TData, TValue>({
   onSelectionChange,
   searchFields,
   defaultSearchField = 'id',
+  pagination,
+  onPageChange,
+  onPageSizeChange,
+  isAdmin = false,
 }: DataTableProps<TData, TValue>) {
   const [addOpen, setAddOpen] = React.useState(false);
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -63,7 +76,10 @@ export function DataTable<TData, TValue>({
   const [searchField, setSearchField] = React.useState<string>(defaultSearchField);
   const [searchQuery, setSearchQuery] = React.useState('');
 
+  // If using backend pagination, don't filter on frontend
   const filteredData = React.useMemo(() => {
+    if (pagination) return data; // Backend pagination - data is already filtered
+    
     if (!searchQuery) return data;
     const q = searchQuery.toLowerCase();
     return data.filter((row: any) => {
@@ -75,7 +91,7 @@ export function DataTable<TData, TValue>({
       }
       return value.includes(q);
     });
-  }, [data, searchField, searchQuery]);
+  }, [data, searchField, searchQuery, pagination]);
 
   const tableColumns = React.useMemo(() => {
     if (selectable) {
@@ -128,6 +144,7 @@ export function DataTable<TData, TValue>({
           onDeleteSelected={onDeleteSelected}
           selectable={selectable}
           searchFields={searchFields}
+          isAdmin={isAdmin}
         />
         {onAddData && (
           <UserForm
@@ -180,7 +197,12 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      <DataTableFooter table={table} />
+      <DataTableFooter 
+        table={table} 
+        pagination={pagination}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+      />
     </div>
   );
 }

@@ -14,6 +14,7 @@ type Props = {
   onDeleteSelected?: (rows: any[]) => void;
   selectable?: boolean;
   searchFields?: { value: string; label: string }[];
+  isAdmin?: boolean; // For role-based access control
 };
 
 export default function DataTableToolbar({
@@ -26,6 +27,7 @@ export default function DataTableToolbar({
   onDeleteSelected,
   selectable = false,
   searchFields,
+  isAdmin = false,
 }: Props) {
   const selectedCount = table.getSelectedRowModel().flatRows.length;
 
@@ -67,7 +69,8 @@ export default function DataTableToolbar({
       <div className="ml-auto flex items-center gap-2">
         <TableColumnsDropdown table={table} />
 
-  {selectable && selectedCount > 0 && onDeleteSelected && (
+        {/* Only show delete button for admins */}
+        {isAdmin && selectable && selectedCount > 0 && onDeleteSelected && (
           <Button
             variant="destructive"
             onClick={() => {
@@ -82,7 +85,8 @@ export default function DataTableToolbar({
           </Button>
         )}
 
-        {onAddClick && <Button onClick={onAddClick}>Add Data</Button>}
+        {/* Only show Add button for admins */}
+        {isAdmin && onAddClick && <Button onClick={onAddClick}>Add Data</Button>}
       </div>
     </div>
   );

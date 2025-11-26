@@ -6,13 +6,26 @@ import { usePostStore } from '@/store/postStore';
 import { User } from '@/components/data-table/columns';
 import { MongoUser } from '@/apis/user';
 import { toast } from 'sonner';
+import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function UsersTable() {
-  const { data: mongoUsers, isLoading, error } = useMongoUsers();
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  
+  const { data: paginatedData, isLoading, error } = useMongoUsers(pageNumber, pageSize);
   const { newPosts, addPost } = usePostStore();
   const createMutation = useCreateMongoUser();
+  const { user } = useAuth();
+  
+  const mongoUsers = paginatedData?.users || [];
+  const pagination = paginatedData?.pagination;
+  const isAdmin = user?.role === 'admin';
 
-  // UsersTable: render with MongoDB data (debug logs removed)
+  // Debug: Log user role
+  console.log('🔍 UsersTable - User:', user);
+  console.log('🔍 UsersTable - User Role:', user?.role);
+  console.log('🔍 UsersTable - Is Admin?:', isAdmin);
 
   const userSearchFields = [
     { value: 'firstName', label: 'First Name' },
@@ -33,7 +46,7 @@ export default function UsersTable() {
         birthDate: userData.birthDate
       };
       await createMutation.mutateAsync(mongoUserData);
-      toast.success(`User "${userData.firstName} ${userData.lastName}" added to MongoDB!`);
+      toast.success(`User "${userData.firstName} ${userData.lastName}" added succesfully!`);
     } catch (error) {
       console.error('❌ Failed to create user in MongoDB:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -73,7 +86,7 @@ export default function UsersTable() {
   }
 
   // Convert MongoUser to User format - ONLY use MongoDB data when connected
-  const convertedMongoUsers: User[] = (mongoUsers || []).map(user => ({
+  const convertedMongoUsers: User[] = mongoUsers.map(user => ({
     firstName: user.firstName,
     lastName: user.lastName,
     age: user.age,
@@ -86,11 +99,17 @@ export default function UsersTable() {
     updatedAt: user.updatedAt
   }));
 
-  // total users: convertedMongoUsers.length
-
   return (
     <div className="mb-8">
-      {/* Status banner removed: connection status is implicit in functionality */}
+      {/* Backend Pagination Info */}
+      {pagination && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-900">
+            📄 <strong>Backend Pagination:</strong> Page {pagination.pageNumber} of {pagination.totalPages} | 
+            Total Users: {pagination.total} | Showing: {mongoUsers.length} per page
+          </p>
+        </div>
+      )}
 
       <DataTable
         columns={columns}
@@ -98,6 +117,13 @@ export default function UsersTable() {
         onAddData={handleAddUser}
         searchFields={userSearchFields}
         defaultSearchField="firstName"
+        pagination={pagination}
+        onPageChange={(page: number) => setPageNumber(page)}
+        onPageSizeChange={(size: number) => {
+          setPageSize(size);
+          setPageNumber(1); // Reset to first page when changing page size
+        }}
+        isAdmin={isAdmin}
       />
     </div>
   );

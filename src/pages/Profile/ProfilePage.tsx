@@ -1,18 +1,56 @@
-import { User, Mail, Phone, Calendar, MapPin, Briefcase } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { api } from '@/apis/auth';
 
 export default function ProfilePage() {
-  // Mock user data - this would come from your auth context/API in real app
-  const user = {
-    name: 'Astoria Black',
-    email: 'Astoria.black@gmail.com',
-    phone: '+1 (555) 123-4567',
-    role: 'Administrator',
-    department: 'Engineering',
-    location: 'San Francisco, CA',
-    joinDate: 'January 15, 2024',
-    bio: 'Passionate about building great user experiences and leading development teams.',
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  // Debug: Check what user data we're receiving
+  console.log('🔍 ProfilePage - Full user object:', user);
+  console.log('🔍 ProfilePage - User role field:', user?.role);
+  console.log('🔍 ProfilePage - Role type:', typeof user?.role);
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      'Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your data.'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      // Delete the user account from database
+      await api.delete('/auth/delete-account');
+      
+      // Logout and redirect to login page
+      logout();
+      toast.success('Account deleted successfully');
+      navigate('/login');
+    } catch (error) {
+      console.error('Failed to delete account:', error);
+      const errorMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to delete account';
+      toast.error(errorMessage);
+    }
+  };
+
+  // Use real user data from MongoDB (firstName, lastName, phone, birthDate)
+  const userData = {
+    name: user?.name || 'User',
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    email: user?.email || 'user@example.com',
+    phone: user?.phone || 'Not provided',
+    role: user?.role === 'admin' ? 'Administrator' : 'User',
+    birthDate: user?.birthDate,
+    joinDate: user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }) : 'Recently',
   };
 
   return (
@@ -31,58 +69,112 @@ export default function ProfilePage() {
           <div className="flex-1">
             <div className="flex items-start justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-1">{user.name}</h1>
-                <p className="text-lg text-gray-600 mb-3">{user.role}</p>
-                <p className="text-sm text-gray-500 max-w-2xl">{user.bio}</p>
+                <h1 className="text-3xl font-bold text-gray-900 mb-1">{userData.name}</h1>
+                <div className="flex items-center gap-2">
+                  <p className="text-lg text-gray-600">{userData.role}</p>
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                    user?.role === 'admin' 
+                      ? 'bg-purple-100 text-purple-700' 
+                      : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    {user?.role === 'admin' ? 'Full Access' : 'View Only'}
+                  </span>
+                </div>
               </div>
-              <Button>Edit Profile</Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Contact Information Card */}
+      {/* Personal Information Card - Data from MongoDB */}
       <div className="bg-white rounded-lg shadow-sm border p-8 mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">Contact Information</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-6">Personal Information</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* First Name */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <Mail className="h-5 w-5 text-blue-600" />
+              <User className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Email</p>
-              <p className="text-sm font-medium text-gray-900">{user.email}</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">First Name</p>
+              <p className="text-sm font-medium text-gray-900">{userData.firstName || 'Not provided'}</p>
             </div>
           </div>
 
+          {/* Last Name */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+              <User className="h-5 w-5 text-indigo-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Last Name</p>
+              <p className="text-sm font-medium text-gray-900">{userData.lastName || 'Not provided'}</p>
+            </div>
+          </div>
+
+          {/* Email */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
+              <Mail className="h-5 w-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Email</p>
+              <p className="text-sm font-medium text-gray-900">{userData.email}</p>
+            </div>
+          </div>
+
+          {/* Phone */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
               <Phone className="h-5 w-5 text-green-600" />
             </div>
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wide">Phone</p>
-              <p className="text-sm font-medium text-gray-900">{user.phone}</p>
+              <p className="text-sm font-medium text-gray-900">{userData.phone}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-              <MapPin className="h-5 w-5 text-purple-600" />
+          {/* Birth Date */}
+          {userData.birthDate && (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Birth Date</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {new Date(userData.birthDate).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Location</p>
-              <p className="text-sm font-medium text-gray-900">{user.location}</p>
-            </div>
-          </div>
+          )}
 
+          {/* Account Type */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center">
-              <Briefcase className="h-5 w-5 text-orange-600" />
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+              user?.role === 'admin' ? 'bg-purple-50' : 'bg-blue-50'
+            }`}>
+              <Briefcase className={`h-5 w-5 ${
+                user?.role === 'admin' ? 'text-purple-600' : 'text-blue-600'
+              }`} />
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Department</p>
-              <p className="text-sm font-medium text-gray-900">{user.department}</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Account Type</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-gray-900">{userData.role}</p>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  user?.role === 'admin' 
+                    ? 'bg-purple-100 text-purple-700' 
+                    : 'bg-blue-100 text-blue-700'
+                }`}>
+                  {user?.role === 'admin' ? 'Full Access' : 'View Only'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -100,7 +192,7 @@ export default function ProfilePage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-900">Member Since</p>
-                <p className="text-xs text-gray-500">{user.joinDate}</p>
+                <p className="text-xs text-gray-500">{userData.joinDate}</p>
               </div>
             </div>
           </div>
@@ -117,17 +209,6 @@ export default function ProfilePage() {
             </span>
           </div>
 
-          <Separator />
-
-          <div className="flex items-center justify-between py-3">
-            <div>
-              <p className="text-sm font-medium text-gray-900">Two-Factor Authentication</p>
-              <p className="text-xs text-gray-500">Add an extra layer of security</p>
-            </div>
-            <Button variant="outline" size="sm">
-              Enable
-            </Button>
-          </div>
         </div>
       </div>
 
@@ -137,7 +218,11 @@ export default function ProfilePage() {
         <p className="text-sm text-gray-600 mb-4">
           Irreversible and destructive actions
         </p>
-        <Button variant="destructive" size="sm">
+        <Button 
+          variant="destructive" 
+          size="sm"
+          onClick={handleDeleteAccount}
+        >
           Delete Account
         </Button>
       </div>

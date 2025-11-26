@@ -4,16 +4,16 @@ import StatCard from '@/components/dashboard/StatCard';
 import PriceDistributionChart from '@/components/dashboard/PriceDistributionChart';
 import DashboardSkeleton from '@/components/customUi/DashboardSkeleton';
 import { useProducts } from '@/hooks/useProductQueries';
-import { usePostStore } from '@/store/postStore';
+import { useMongoUsers } from '@/hooks/useMongoUsers';
 
 export default function DashboardPage() {
   const { data: products = [], isLoading } = useProducts();
-  const { newPosts: manualUsers = [] } = usePostStore();
+  const { data: paginatedData } = useMongoUsers(1, 10);
 
   // Calculate stats
   const stats = useMemo(() => {
     const totalProducts = products.length;
-    const totalUsers = manualUsers.length; // Only count manually added users from the store
+    const totalUsers = paginatedData?.pagination?.total || 0; // Get total count from pagination
     const totalRevenue = products.reduce((sum, p) => sum + p.price * p.stock, 0);
     const averageRating = products.length > 0
       ? products.reduce((sum, p) => sum + p.rating, 0) / products.length
@@ -25,7 +25,7 @@ export default function DashboardPage() {
       totalRevenue,
       activeRate: averageRating,
     };
-  }, [products, manualUsers]);
+  }, [products, paginatedData?.pagination?.total]);
 
   // Calculate price distribution
   const priceDistribution = useMemo(() => {

@@ -17,18 +17,38 @@ export interface MongoUser {
   updatedAt?: string;
 }
 
+export interface PaginationInfo {
+  total: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface PaginatedUsersResponse {
+  users: MongoUser[];
+  pagination: PaginationInfo;
+}
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' }
 });
 
-export async function fetchMongoUsers(): Promise<MongoUser[]> {
+export async function fetchMongoUsers(pageNumber = 1, pageSize = 10): Promise<PaginatedUsersResponse> {
   try {
-    const response = await api.get('/users');
-    return response.data.data.map((user: any, index: number) => ({
+    const response = await api.get('/users', {
+      params: { pageNumber, pageSize }
+    });
+    
+    const users = response.data.data.map((user: any, index: number) => ({
       ...user,
       id: user._id || index + 1
     }));
+    
+    return {
+      users,
+      pagination: response.data.pagination
+    };
   } catch (error) {
     console.error('❌ Error fetching users:', error);
     throw error;

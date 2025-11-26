@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchMongoUsers, createMongoUser, updateMongoUser, deleteMongoUser, MongoUser } from '@/apis/user';
 
-export function useMongoUsers() {
+export function useMongoUsers(pageNumber = 1, pageSize = 10) {
   return useQuery({
-    queryKey: ['mongo-users'],
-    queryFn: fetchMongoUsers,
+    queryKey: ['mongo-users', pageNumber, pageSize],
+    queryFn: () => fetchMongoUsers(pageNumber, pageSize),
     staleTime: 0, // Always fetch fresh data
     refetchOnMount: true,
     refetchOnWindowFocus: true
