@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { DataTablePagination } from '@/components/customUi/pagination';
-import RowsPerPageSelect from '@/components/customUi/rows-per-page-select';
-import { PaginationInfo } from '@/apis/user';
+import { DataTablePagination } from '@/components/shared/pagination';
+import RowsPerPageSelect from '@/components/shared/rows-per-page-select';
+import { PaginationInfo } from '@/api/user.api';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 

@@ -2,14 +2,15 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import LoginPage from './pages/Auth/LoginPage';
-import SignupPage from './pages/Auth/SignupPage';
-import DashboardPage from './pages/Dashboard/DashboardPage';
-import NewlyAddedUsersTable from './pages/Users/NewlyAddedUsersTable';
-import ProductsTable from './pages/Products/ProductsTable';
-import ProfilePage from './pages/Profile/ProfilePage';
-import Sidebar from '@/components/sidebar/Sidebar';
-import Navbar from '@/components/navbar/Navbar';
+import LoginPage from './features/auth/pages/LoginPage';
+import SignupPage from './features/auth/pages/SignupPage';
+import DashboardPage from './features/dashboard/DashboardPage';
+import NewlyAddedUsersTable from './features/users/pages/NewlyAddedUsersTable';
+import ProductsTable from './features/products/pages/ProductsTable';
+import MongoProductsPage from './features/products/pages/MongoProductsPage';
+import ProfilePage from './features/users/pages/ProfilePage';
+import Sidebar from '@/components/common/Sidebar';
+import Navbar from '@/components/common/Navbar';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
                     <Routes>
                       <Route path="/" element={<DashboardPage />} />
                       <Route path="/products" element={<ProductsTable />} />
+                      <Route path="/mongo-products" element={<MongoProductsPage />} />
                       <Route path="/users" element={<NewlyAddedUsersTable />} />
                       <Route path="/profile" element={<ProfilePage />} />
                       <Route path="*" element={<Navigate to="/" replace />} />

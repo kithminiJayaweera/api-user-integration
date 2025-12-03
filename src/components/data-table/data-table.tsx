@@ -2,7 +2,7 @@
 import React from 'react';
 import DataTableToolbar from './data-table-toolbar';
 
-import { UserForm } from '@/components/form/add-post-form';
+import { UserForm } from '@/components/forms/UserForm';
 
 import {
   ColumnDef,
@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PaginationInfo } from '@/apis/user';
+import { PaginationInfo } from '@/api/user.api';
 // pagination is provided by DataTableFooter
 
 interface DataTableProps<TData, TValue> {

@@ -6,12 +6,11 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { UserForm } from '@/components/form/add-post-form';
-import { usePostStore } from '@/store/postStore';
-import { UserDetailsDialog } from '@/components/form/user-details-dialog';
+import { UserForm } from '@/components/forms/UserForm';
+import { UserDetailsDialog } from '@/components/forms/UserDetailsDialog';
 import { DataTableColumnHeader } from './table-columns-dropdown';
-import { useUpdateMongoUser, useDeleteMongoUser } from '@/hooks/useMongoUsers';
-import { MongoUser } from '@/apis/user';
+import { useUpdateMongoUser, useDeleteMongoUser } from '@/features/users/hooks/useMongoUsers';
+import { MongoUser } from '@/api/user.api';
 
 export const UserSchema = z.object({
   id: z.union([z.number().min(1), z.string().min(1)]).optional(), // Accept both number and string IDs (for MongoDB compatibility)
@@ -26,7 +25,8 @@ export const UserSchema = z.object({
   age: z
     .number()
     .min(1, 'Age must be greater than 0')
-    .max(120, 'Age must be less than 120'),
+    .max(120, 'Age must be less than 120')
+    .optional(),
   email: z
     .string()
     .min(1, 'Email is required')
@@ -45,11 +45,17 @@ export const UserSchema = z.object({
       },
       { message: 'Email must have a valid domain' }
     ),
+  password: z
+    .string()
+    .min(6, 'Password must be at least 6 characters')
+    .optional(), // Optional when editing, required when creating
   phone: z
     .string()
     .min(1, 'Phone number is required')
+    .optional()
     .refine(
       (phone) => {
+        if (!phone) return true; // Allow empty
         const phoneRegex = /^(\+\d{1,3}[- ]?)?\(?\d{1,4}\)?[- ]?\d{1,4}[- ]?\d{1,9}$/;
         return phoneRegex.test(phone.replace(/\s/g, ''));
       },
@@ -58,8 +64,10 @@ export const UserSchema = z.object({
   birthDate: z
     .string()
     .min(1, 'Birth date is required')
+    .optional()
     .refine(
       (date) => {
+        if (!date) return true; // Allow empty
         const selectedDate = new Date(date);
         const today = new Date();
         today.setHours(23, 59, 59, 999);
@@ -67,7 +75,8 @@ export const UserSchema = z.object({
       },
       { message: 'Birth date cannot be in the future' }
     ),
-  gender: z.string().optional(),
+  gender: z.enum(['male', 'female', 'other']).optional(),
+  role: z.enum(['admin', 'user']).default('user'),
 });
 
 export type User = z.infer<typeof UserSchema> & {
@@ -109,7 +118,6 @@ function CopyButton({ text }: { text: string }) {
 function ActionsCell({ user }: { user: User }) {
   const [showDialog, setShowDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const { updatePost } = usePostStore();
   const updateMutation = useUpdateMongoUser();
   const deleteMutation = useDeleteMongoUser();
 
@@ -132,8 +140,6 @@ function ActionsCell({ user }: { user: User }) {
   };
 
   const handleUpdate = async (updatedUser: User) => {
-    console.log('🔄 handleUpdate called with:', updatedUser);
-    console.log('🔍 Original user:', user);
     try {
       if (user._id) {
         // Prepare data for MongoDB update
@@ -141,19 +147,17 @@ function ActionsCell({ user }: { user: User }) {
           firstName: updatedUser.firstName,
           lastName: updatedUser.lastName,
           email: updatedUser.email,
+          password: updatedUser.password, // Only update if provided
           age: updatedUser.age,
           phone: updatedUser.phone,
           gender: updatedUser.gender,
-          birthDate: updatedUser.birthDate
+          birthDate: updatedUser.birthDate,
+          role: updatedUser.role
         };
-        console.log('📤 Sending update to MongoDB:', { id: user._id, data: updateData });
         await updateMutation.mutateAsync({ id: user._id, data: updateData });
-        console.log('✅ Update successful!');
-        toast.success(`User "${updatedUser.firstName} ${updatedUser.lastName}" updated in MongoDB!`);
+        toast.success(`User "${updatedUser.firstName} ${updatedUser.lastName}" updated!`);
       } else {
-        console.log('📝 Updating locally (no _id)');
-        updatePost(updatedUser);
-        toast.success(`User "${updatedUser.firstName} ${updatedUser.lastName}" updated locally!`);
+        toast.error('Cannot update: User has no identifier');
       }
       setShowEditDialog(false);
     } catch (error) {
@@ -170,7 +174,6 @@ function ActionsCell({ user }: { user: User }) {
           variant="ghost"
           size="sm"
           onClick={() => {
-            console.log('View button clicked for user:', user);
             setShowDialog(true);
           }}
           className="h-8 w-8 p-0"
@@ -182,7 +185,6 @@ function ActionsCell({ user }: { user: User }) {
           size="sm"
           onClick={(e) => {
             e.stopPropagation();
-            console.log('Edit button clicked for user:', user);
             setShowEditDialog(true);
           }}
           className="h-8 w-8 p-0"
@@ -297,6 +299,24 @@ export const columns: ColumnDef<User>[] = [
     ),
   },
   {
+    accessorKey: 'role',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Role" />
+    ),
+    cell: ({ row }) => {
+      const role = row.getValue('role') as 'admin' | 'user';
+      return (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          role === 'admin' 
+            ? 'bg-purple-100 text-purple-700' 
+            : 'bg-blue-100 text-blue-700'
+        }`}>
+          {role === 'admin' ? 'Admin' : 'User'}
+        </span>
+      );
+    },
+  },
+  {
     id: 'actions',
     header: 'Actions',
     cell: ({ row }) => <ActionsCell user={row.original} />,
@@ -357,6 +377,24 @@ export const apiColumns: ColumnDef<User>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Date of Birth" />
     ),
+  },
+  {
+    accessorKey: 'role',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Role" />
+    ),
+    cell: ({ row }) => {
+      const role = row.getValue('role') as 'admin' | 'user';
+      return (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          role === 'admin' 
+            ? 'bg-purple-100 text-purple-700' 
+            : 'bg-blue-100 text-blue-700'
+        }`}>
+          {role === 'admin' ? 'Admin' : 'User'}
+        </span>
+      );
+    },
   },
   {
     id: 'actions',

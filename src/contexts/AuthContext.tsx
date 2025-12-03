@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { login as apiLogin, register as apiRegister, getCurrentUser, logout as apiLogout, AuthUser, LoginCredentials, RegisterData } from '@/apis/auth';
+import { login as apiLogin, register as apiRegister, getCurrentUser, logout as apiLogout, AuthUser, LoginCredentials, RegisterData } from '@/api/auth.api';
 import { toast } from 'sonner';
+import { useCookieMonitor } from '@/features/auth/hooks/useCookieMonitor';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -36,26 +37,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initAuth();
   }, []);
 
-  // Periodically check if cookie still exists (detect manual cookie deletion)
-  useEffect(() => {
-    if (!user) return; // Only check if user is logged in
-
-    const checkAuth = async () => {
-      try {
-        await getCurrentUser();
-      } catch {
-        // Cookie was deleted or expired - log out
-        console.log('🔓 Cookie deleted or expired - logging out');
+  // Monitor auth_token cookie - logout if it's manually cleared
+  // Works now because cookie is non-httpOnly (for tutorial purposes)
+  useCookieMonitor({
+    cookieName: 'auth_token',
+    onCookieCleared: () => {
+      if (user) {
         setUser(null);
+        toast.error('Session expired. Please login again.');
         window.location.href = '/login';
       }
-    };
-
-    // Check every 5 seconds if cookie is still valid
-    const interval = setInterval(checkAuth, 5000);
-
-    return () => clearInterval(interval);
-  }, [user]);
+    },
+    checkInterval: 5000,
+    enabled: user !== null,
+  });
 
   const login = async (credentials: LoginCredentials) => {
     try {
@@ -66,7 +61,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // The browser will send the cookie automatically with every request
       
       setUser(response.user);
-      toast.success(`Welcome back, ${response.user.name}!`);
+      toast.success(`Welcome back, ${response.user.firstName}!`);
     } catch (error) {
       const message = (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Login failed';
       toast.error(message);
@@ -85,7 +80,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // The browser will send the cookie automatically with every request
       
       setUser(response.user);
-      toast.success(`Welcome, ${response.user.name}!`);
+      toast.success(`Welcome, ${response.user.firstName}!`);
     } catch (error) {
       const message = (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Registration failed';
       toast.error(message);
@@ -98,7 +93,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = async () => {
     try {
       await apiLogout(); // This clears the HTTP-only cookie on the server
-      setUser(null);
+      setUser(null); // Clear user state immediately
       toast.success('Logged out successfully');
     } catch {
       // Even if logout fails, clear local user state
