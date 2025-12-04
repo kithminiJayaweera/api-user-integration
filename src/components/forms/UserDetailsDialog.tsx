@@ -1,6 +1,7 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -13,17 +14,38 @@ interface UserDetailsDialogProps {
 }
 
 export function UserDetailsDialog({ user, open, onOpenChange }: UserDetailsDialogProps) {
+  const getInitials = () => {
+    return `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="font-bold text-2xl">User Details</DialogTitle>
+          <DialogDescription>
+            View detailed information about this user
+          </DialogDescription>
         </DialogHeader>
 
         <div className="mt-2">
-          <div className="flex items-center justify-between">
+          {/* Profile Picture */}
+          <div className="flex justify-center mb-6">
+            <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center">
+              {user.profilePicture ? (
+                <img 
+                  src={user.profilePicture} 
+                  alt={`${user.firstName} ${user.lastName}`}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-white text-2xl font-bold">{getInitials()}</span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center">
             <h3 className="text-lg font-semibold">{user.firstName} {user.lastName}</h3>
-            <span className="text-sm font-semibold px-3 py-1 bg-muted rounded-md">ID {user.id}</span>
           </div>
 
           <dl className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">

@@ -245,6 +245,25 @@ function ViewOnlyActionsCell({ user }: { user: User }) {
 
 export const columns: ColumnDef<User>[] = [
   {
+    accessorKey: 'profilePicture',
+    header: 'Photo',
+    cell: ({ row }) => (
+      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white overflow-hidden">
+        {row.original.profilePicture ? (
+          <img 
+            src={row.original.profilePicture} 
+            alt={row.original.firstName} 
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <span className="text-sm font-medium">
+            {row.original.firstName?.[0]}{row.original.lastName?.[0]}
+          </span>
+        )}
+      </div>
+    ),
+  },
+  {
     accessorKey: 'firstName',
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="First Name" />

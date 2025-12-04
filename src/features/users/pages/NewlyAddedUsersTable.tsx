@@ -80,6 +80,7 @@ export default function NewlyAddedUsersTable() {
     phone: user.phone,
     birthDate: user.birthDate,
     role: user.role,
+    profilePicture: user.profilePicture,
     _id: user._id,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt

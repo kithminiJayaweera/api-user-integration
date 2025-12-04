@@ -1,14 +1,71 @@
-import { User, Mail, Phone, Calendar, Briefcase } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Briefcase, Camera, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api } from '@/api/auth.api';
+import { useUploadProfilePicture, useDeleteProfilePicture } from '@/features/auth/hooks/useProfilePicture';
+import { useState, useRef } from 'react';
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth();
+  const { user, logout, setUser } = useAuth();
   const navigate = useNavigate();
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const uploadMutation = useUploadProfilePicture();
+  const deleteMutation = useDeleteProfilePicture();
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size must be less than 5MB');
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Upload immediately
+      uploadMutation.mutate(file, {
+        onSuccess: (data) => {
+          toast.success('Profile picture uploaded successfully!');
+          setUser(data.user);
+          setImagePreview(null);
+        },
+        onError: (error: any) => {
+          toast.error(error.message);
+          setImagePreview(null);
+        }
+      });
+    }
+  };
+
+  const handleDeletePicture = async () => {
+    if (confirm('Are you sure you want to delete your profile picture?')) {
+      deleteMutation.mutate(undefined, {
+        onSuccess: (data) => {
+          toast.success('Profile picture deleted successfully!');
+          setUser(data.user);
+        },
+        onError: (error: any) => {
+          toast.error(error.message);
+        }
+      });
+    }
+  };
 
   const handleDeleteAccount = async () => {
     const confirmed = window.confirm(
@@ -55,8 +112,60 @@ export default function ProfilePage() {
         <div className="flex items-start gap-6">
           {/* Profile Avatar */}
           <div className="flex-shrink-0">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-lg">
-              <User className="h-12 w-12" />
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-lg overflow-hidden">
+                {imagePreview ? (
+                  <img 
+                    src={imagePreview} 
+                    alt="Preview" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : user?.profilePicture ? (
+                  <img 
+                    src={user.profilePicture} 
+                    alt={user.firstName} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="h-12 w-12" />
+                )}
+              </div>
+              {uploadMutation.isPending && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                  <span className="text-white text-xs">Uploading...</span>
+                </div>
+              )}
+            </div>
+            <div className="mt-4 flex flex-col gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadMutation.isPending}
+                className="text-xs"
+              >
+                <Camera className="h-3 w-3 mr-1" />
+                Upload
+              </Button>
+              {user?.profilePicture && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDeletePicture}
+                  disabled={deleteMutation.isPending}
+                  className="text-xs text-red-600"
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Remove
+                </Button>
+              )}
             </div>
           </div>
 

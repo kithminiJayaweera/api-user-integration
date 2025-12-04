@@ -54,6 +54,7 @@ export interface AuthUser {
   firstName: string;
   lastName: string;
   role: 'admin' | 'user';
+  profilePicture?: string;
   createdAt?: string;
   phone?: string;
   age?: number;

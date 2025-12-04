@@ -54,8 +54,16 @@ export default function Navbar() {
                 variant="ghost" 
                 className="flex items-center gap-3 px-3 py-2 h-auto hover:bg-gray-100 rounded-lg"
               >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-md hover:shadow-lg transition-shadow">
-                  <User className="h-5 w-5" />
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+                  {user?.profilePicture ? (
+                    <img 
+                      src={user.profilePicture} 
+                      alt={user.firstName} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="h-5 w-5" />
+                  )}
                 </div>
                 <div className="flex flex-col items-start">
                   <span className="text-sm font-medium text-gray-900">{user ? `${user.firstName} ${user.lastName}` : 'User'}</span>

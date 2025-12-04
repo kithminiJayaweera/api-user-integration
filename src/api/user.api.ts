@@ -15,6 +15,7 @@ export interface MongoUser {
   phone?: string;
   birthDate?: string;
   role: 'admin' | 'user';
+  profilePicture?: string;
   createdAt?: string;
   updatedAt?: string;
 }
